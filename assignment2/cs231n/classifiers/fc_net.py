@@ -255,9 +255,13 @@ class FullyConnectedNet(object):
 
         out = X
         for l in range(self.num_layers - 1):
-            out, caches[l] = affine_relu_forward(out, self.params['W' + str(l + 1)], self.params['b' + str(l + 1)])
-        out, caches[l + 1] = affine_forward(out, self.params['W' + str(l + 2)], self.params['b' + str(l + 2)])
-        scores = out
+            if self.use_batchnorm:
+                out, caches[l] = affine_bn_relu_forward(out, self.params['W' + str(l + 1)], self.params['b' + str(l + 1)],
+                    self.params['gamma' + str(l + 1)], self.params['beta' + str(l + 1)], self.bn_params[l])
+            else:
+                out, caches[l] = affine_relu_forward(out, self.params['W' + str(l + 1)], self.params['b' + str(l + 1)])
+
+        scores, caches[l + 1] = affine_forward(out, self.params['W' + str(l + 2)], self.params['b' + str(l + 2)])
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -288,7 +292,12 @@ class FullyConnectedNet(object):
         
         for l in range(self.num_layers - 1, 0, -1):
             loss += 0.5 * self.reg * np.sum(self.params['W' + str(l)] * self.params['W' + str(l)])
-            dout, grads['W' + str(l)], grads['b' + str(l)] = affine_relu_backward(dout, caches[l - 1])
+            if self.use_batchnorm:
+                dout, grads['W' + str(l)], grads['b' + str(l)], grads['gamma' + str(l)], grads['beta' + str(l)] = \
+                    affine_bn_relu_backward(dout, caches[l - 1])
+            else:
+                dout, grads['W' + str(l)], grads['b' + str(l)] = affine_relu_backward(dout, caches[l - 1])
+
             grads['W' + str(l)] += self.reg * self.params['W' + str(l)]
         ############################################################################
         #                             END OF YOUR CODE                             #
