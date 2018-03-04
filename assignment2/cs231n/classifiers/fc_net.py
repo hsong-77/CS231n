@@ -187,8 +187,8 @@ class FullyConnectedNet(object):
             self.params['W' + str(l + 1)] = np.random.normal(0, weight_scale, [hidden_dims[l - 1], hidden_dims[l]])
             self.params['b' + str(l + 1)] = np.zeros([hidden_dims[l]])
         
-        self.params['W' + str(l + 2)] = np.random.normal(0, weight_scale, [hidden_dims[l], num_classes])
-        self.params['b' + str(l + 2)] = np.zeros([num_classes])
+        self.params['W' + str(self.num_layers)] = np.random.normal(0, weight_scale, [hidden_dims[self.num_layers - 2], num_classes])
+        self.params['b' + str(self.num_layers)] = np.zeros([num_classes])
         
         if use_batchnorm:
             for l in range(self.num_layers - 1):
@@ -252,6 +252,7 @@ class FullyConnectedNet(object):
         # layer, etc.                                                              #
         ############################################################################
         caches = {}
+        dropout_caches = {}
 
         out = X
         for l in range(self.num_layers - 1):
@@ -260,6 +261,8 @@ class FullyConnectedNet(object):
                     self.params['gamma' + str(l + 1)], self.params['beta' + str(l + 1)], self.bn_params[l])
             else:
                 out, caches[l] = affine_relu_forward(out, self.params['W' + str(l + 1)], self.params['b' + str(l + 1)])
+            if self.use_dropout:
+                out, dropout_caches[l] = dropout_forward(out, self.dropout_param)
 
         scores, caches[l + 1] = affine_forward(out, self.params['W' + str(l + 2)], self.params['b' + str(l + 2)])
         ############################################################################
@@ -292,6 +295,8 @@ class FullyConnectedNet(object):
         
         for l in range(self.num_layers - 1, 0, -1):
             loss += 0.5 * self.reg * np.sum(self.params['W' + str(l)] * self.params['W' + str(l)])
+            if self.use_dropout:
+                dout = dropout_backward(dout, dropout_caches[l - 1])
             if self.use_batchnorm:
                 dout, grads['W' + str(l)], grads['b' + str(l)], grads['gamma' + str(l)], grads['beta' + str(l)] = \
                     affine_bn_relu_backward(dout, caches[l - 1])
